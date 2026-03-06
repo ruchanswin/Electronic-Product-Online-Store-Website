@@ -1,0 +1,42 @@
+[
+    {
+        "id": 1,
+        "user_id": 1,
+        "order_id": "1",
+        "reason": "na",
+        "timestamp": "2025-05-18 23:28:37",
+        "status": "approved"
+    },
+    {
+        "id": 2,
+        "user_id": 1,
+        "order_id": "4",
+        "reason": "NA",
+        "timestamp": "2025-05-20 12:24:51",
+        "status": "rejected"
+    },
+    {
+        "id": 3,
+        "user_id": 3,
+        "order_id": "6",
+        "reason": "Damaged Goods",
+        "timestamp": "2025-06-04 15:01:17.932813",
+        "status": "approved"
+    },
+    {
+        "id": 4,
+        "user_id": 5,
+        "order_id": "6",
+        "reason": "Damaged Goods",
+        "timestamp": "2025-06-05 14:23:15.870408",
+        "status": "rejected"
+    },
+    {
+        "id": 5,
+        "user_id": 5,
+        "order_id": "6",
+        "reason": "Damaged Goods",
+        "timestamp": "2025-06-05 14:38:45.478127",
+        "status": "rejected"
+    }
+]

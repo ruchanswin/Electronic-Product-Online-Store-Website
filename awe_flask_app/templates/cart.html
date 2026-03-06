@@ -1,0 +1,71 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Your Shopping Cart</h2>
+
+{% if cart %}
+  {% set ns = namespace(total=0) %}
+  {% set counts = {} %}
+  {% for pid in cart %}
+    {% set _ = counts.update({pid: (counts[pid] + 1) if counts.get(pid) else 1}) %}
+  {% endfor %}
+
+  <table class="table table-bordered table-striped">
+    <thead class="table-dark">
+      <tr>
+        <th>Product</th>
+        <th>Price</th>
+        <th>Qty</th>
+        <th>Total</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pid, qty in counts.items() %}
+        {% for product in products %}
+          {% if product.id|string == pid %}
+            {% set subtotal = product.price * qty %}
+            {% set ns.total = ns.total + subtotal %}
+            <tr>
+              <td>{{ product.name }}</td>
+              <td>${{ "%.2f"|format(product.price) }}</td>
+              <td>
+                  <form action="{{ url_for('update_quantity', product_id=product.id) }}" method="POST" class="d-flex align-items-center">
+                      <input type="number" 
+                             name="quantity" 
+                             value="{{ qty }}" 
+                             min="0" 
+                             max="{{ product.stock }}" 
+                             class="form-control form-control-sm" 
+                             style="width: 70px;"
+                             onchange="this.form.submit()">
+                  </form>
+              </td>
+              <td>${{ "%.2f"|format(subtotal) }}</td>
+              <td>
+                  <a href="{{ url_for('remove_item', product_id=product.id) }}" 
+                     class="btn btn-sm btn-danger"
+                     onclick="return confirm('Are you sure you want to remove this item?')">
+                      Remove
+                  </a>
+              </td>
+          </tr>
+            
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="text-end">
+    <h4>Total: ${{ "%.2f"|format(ns.total) }}</h4>
+    <a href="{{ url_for('checkout') }}" class="btn btn-success">Proceed to Checkout</a>
+  </div>
+{% else %}
+  <p>Your cart is empty.</p>
+{% endif %}
+{% endblock %}
+
+
+<h4 class="text-end">Total: ${{ "%.2f"|format(ns.total) }}</h4>
+
+

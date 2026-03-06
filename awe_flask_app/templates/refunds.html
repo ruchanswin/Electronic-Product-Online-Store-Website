@@ -1,0 +1,33 @@
+
+{% extends "layout.html" %}
+{% block content %}
+<h2>Refund Requests</h2>
+
+<form method="POST" class="mb-4">
+    <div class="mb-3">
+        <label>Order ID</label>
+        <input type="text" name="order_id" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Reason</label>
+        <input type="text" name="reason" class="form-control" required>
+    </div>
+    <button class="btn btn-warning">Submit Refund Request</button>
+</form>
+
+{% if refunds %}
+<ul class="list-group">
+    {% for refund in refunds %}
+    <li class="list-group-item">
+        <strong>Refund ID:</strong> {{ refund.id }} <br>
+        <strong>Order ID:</strong> {{ refund.order_id }} <br>
+        <strong>Status:</strong> {{ refund.status }} <br>
+        <strong>Submitted:</strong> {{ refund.timestamp }}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No refund requests submitted.</p>
+{% endif %}
+
+{% endblock %}

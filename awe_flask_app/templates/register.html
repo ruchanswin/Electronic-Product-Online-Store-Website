@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Register</h2>
+<p class="text-muted">Create your AWE Online Store account</p>
+
+<form method="POST" class="p-3 border rounded shadow-sm bg-light" id="registerForm" onsubmit="return validateForm()">
+    <div class="mb-3">
+        <label>Name</label>
+        <input type="text" name="name" id="name" class="form-control" 
+               pattern="^[A-Za-z\s]+$"
+               title="Name can only contain letters and spaces"
+               placeholder="Enter your full name"
+               required>
+        <div class="invalid-feedback" id="nameError"></div>
+    </div>
+    <div class="mb-3">
+        <label>Email</label>
+        <input type="email" name="email" id="email" class="form-control" 
+               pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.com$"
+               title="Please enter a valid email address ending with .com"
+               placeholder="example@domain.com"
+               required>
+        <div class="invalid-feedback" id="emailError"></div>
+    </div>
+    <div class="mb-3">
+        <label>Password</label>
+        <input type="password" name="password" id="password" class="form-control" 
+               pattern="^[A-Za-z\d\W_]+$"
+               title="Password can contain letters, numbers, and special characters"
+               placeholder="Enter your password"
+               required>
+        <div class="invalid-feedback" id="passwordError"></div>
+    </div>
+    <button type="submit" class="btn btn-success">Register</button>
+    <a href="{{ url_for('login') }}" class="btn btn-link">Already have an account? Login</a>
+</form>
+
+<script>
+function validateForm() {
+    const name = document.getElementById('name');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const nameError = document.getElementById('nameError');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    let isValid = true;
+
+    // Reset previous error messages
+    nameError.textContent = '';
+    emailError.textContent = '';
+    passwordError.textContent = '';
+    name.classList.remove('is-invalid');
+    email.classList.remove('is-invalid');
+    password.classList.remove('is-invalid');
+
+    // Name validation - only letters and spaces
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (!nameRegex.test(name.value)) {
+        nameError.textContent = 'Name can only contain letters and spaces';
+        name.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    // Email validation - must end with .com
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$/;
+    if (!emailRegex.test(email.value)) {
+        emailError.textContent = 'Please enter a valid email address ending with .com';
+        email.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    // Password validation - allows letters, numbers, and special characters
+    const passwordRegex = /^[A-Za-z\d\W_]+$/;
+    if (!passwordRegex.test(password.value)) {
+        passwordError.textContent = 'Password can only contain letters, numbers, and special characters';
+        password.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    return isValid;
+}
+</script>
+{% endblock %}

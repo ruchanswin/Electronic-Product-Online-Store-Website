@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Order Management</h2>
+    
+    {% for order in orders %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Order #{{ order.id }}</h5>
+            <span class="badge {% if order.delivery_status == 'Delivered' %}bg-success{% elif order.delivery_status == 'Cancelled' %}bg-danger{% else %}bg-primary{% endif %}">
+                {{ order.delivery_status }}
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Customer:</strong> 
+                        {% for user in users %}
+                            {% if user.id == order.user_id %}
+                                {{ user.name }}
+                            {% endif %}
+                        {% endfor %}
+                    </p>
+                    <p><strong>Order Date:</strong> {{ order.timestamp }}</p>
+                    <p><strong>Products:</strong></p>
+                    <ul>
+                        {% for product_id in order.products %}
+                            {% for product in products %}
+                                {% if product.id|string == product_id %}
+                                    <li>{{ product.name }} - ${{ product.price }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Delivery Updates</h6>
+                    <div class="timeline">
+                        {% for update in order.delivery_updates %}
+                        <div class="timeline-item">
+                            <small class="text-muted">{{ update.timestamp }}</small>
+                            <p class="mb-1">{{ update.status }}</p>
+                            {% if update.message %}
+                            <small class="text-muted">{{ update.message }}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <form method="POST" class="d-inline">
+                    <input type="hidden" name="order_id" value="{{ order.id }}">
+                    <input type="hidden" name="action" value="update_status">
+                    <div class="input-group">
+                        <select name="new_status" class="form-select">
+                            <option value="Pending">Pending</option>
+                            <option value="Processing">Processing</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Out for Delivery">Out for Delivery</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                        <input type="text" name="status_message" class="form-control" placeholder="Status message (optional)">
+                        <button type="submit" class="btn btn-primary">Update Status</button>
+                    </div>
+                </form>
+                
+                <form method="POST" class="d-inline ms-2">
+                    <input type="hidden" name="order_id" value="{{ order.id }}">
+                    <input type="hidden" name="action" value="cancel">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?')">Cancel Order</button>
+                </form>
+
+                <a href="{{ url_for('view_invoice', order_id=order.id) }}" class="btn btn-info ms-2" target="_blank">
+                    <i class="fas fa-file-invoice"></i> View Invoice
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

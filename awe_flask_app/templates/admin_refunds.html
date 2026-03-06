@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Admin - Refund Requests</h2>
+<table class="table table-bordered">
+  <thead class="table-dark">
+    <tr><th>ID</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for refund in refunds %}
+      <tr>
+        <td>{{ refund.id }}</td>
+        <td>{{ refund.reason }}</td>
+        <td>{{ refund.status or 'pending' }}</td>
+        <td>
+          <form method="POST" class="d-inline">
+            <input type="hidden" name="refund_id" value="{{ refund.id }}">
+            <input type="hidden" name="action" value="approve">
+            <button class="btn btn-success btn-sm">Approve</button>
+          </form>
+          <form method="POST" class="d-inline">
+            <input type="hidden" name="refund_id" value="{{ refund.id }}">
+            <input type="hidden" name="action" value="reject">
+            <button class="btn btn-danger btn-sm">Reject</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

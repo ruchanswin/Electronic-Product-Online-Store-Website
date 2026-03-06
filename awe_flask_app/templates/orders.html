@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2>My Orders</h2>
+    
+    {% for order in orders %}
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Order #{{ order.id }}</h5>
+            <span class="badge {% if order.delivery_status == 'Delivered' %}bg-success{% elif order.delivery_status == 'Cancelled' %}bg-danger{% else %}bg-primary{% endif %}">
+                {{ order.delivery_status }}
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Order Date:</strong> {{ order.timestamp }}</p>
+                    <p><strong>Products:</strong></p>
+                    <ul>
+                        {% for product_id in order.products %}
+                            {% for product in products %}
+                                {% if product.id|string == product_id %}
+                                    <li>{{ product.name }} - ${{ product.price }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>Delivery Updates</h6>
+                    <div class="timeline">
+                        {% for update in order.delivery_updates %}
+                        <div class="timeline-item">
+                            <small class="text-muted">{{ update.timestamp }}</small>
+                            <p class="mb-1">{{ update.status }}</p>
+                            {% if update.message %}
+                            <small class="text-muted">{{ update.message }}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 text-end">
+                <a href="{{ url_for('view_invoice', order_id=order.id) }}" class="btn btn-info" target="_blank">
+                    <i class="fas fa-file-invoice"></i> View Invoice
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

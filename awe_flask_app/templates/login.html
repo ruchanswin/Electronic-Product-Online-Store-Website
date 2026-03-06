@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Login to AWE Online Store</h2>
+<p class="text-muted">Enter your registered email and password to access your account.</p>
+
+<form method="POST" class="p-3 border rounded shadow-sm bg-light" id="loginForm" onsubmit="return validateForm()">
+    <div class="mb-3">
+        <label>Email Address</label>
+        <input type="email" name="email" id="email" class="form-control" 
+               pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.com$"
+               title="Please enter a valid email address ending with .com"
+               placeholder="example@domain.com"
+               required>
+        <div class="invalid-feedback" id="emailError"></div>
+    </div>
+    <div class="mb-3">
+        <label>Password</label>
+        <input type="password" name="password" id="password" class="form-control" 
+               pattern="^[A-Za-z\d\W_]+$"
+               title="Password can contain letters, numbers, and special characters"
+               placeholder="Enter your password"
+               required>
+        <div class="invalid-feedback" id="passwordError"></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Login</button>
+    <a href="{{ url_for('reset_password') }}" class="btn btn-link">Forgot Password?</a>
+</form>
+
+<script>
+function validateForm() {
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const emailError = document.getElementById('emailError');
+    const passwordError = document.getElementById('passwordError');
+    let isValid = true;
+
+    // Reset previous error messages
+    emailError.textContent = '';
+    passwordError.textContent = '';
+    email.classList.remove('is-invalid');
+    password.classList.remove('is-invalid');
+
+    // Email validation - must end with .com
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.com$/;
+    if (!emailRegex.test(email.value)) {
+        emailError.textContent = 'Please enter a valid email address ending with .com';
+        email.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    // Password validation - allows letters, numbers, and special characters
+    const passwordRegex = /^[A-Za-z\d\W_]+$/;
+    if (!passwordRegex.test(password.value)) {
+        passwordError.textContent = 'Password can only contain letters, numbers, and special characters';
+        password.classList.add('is-invalid');
+        isValid = false;
+    }
+
+    return isValid;
+}
+</script>
+{% endblock %}
