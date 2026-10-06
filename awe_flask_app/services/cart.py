@@ -9,11 +9,6 @@ def add_to_cart(product_id):
     cart.append(product_id)
     session["cart"] = cart
 
-def remove_from_cart(product_id):
-    cart = session.get("cart", [])
-    cart = [pid for pid in cart if pid != product_id]
-    session["cart"] = cart
-
 def clear_cart():
     session["cart"] = []
 

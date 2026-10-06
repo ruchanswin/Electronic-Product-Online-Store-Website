@@ -27,7 +27,7 @@ def register():
             flash('Registration successful!', 'success')
             return redirect(url_for('login'))
         else:
-            flash(result['message'], 'danger')
+            flash(str(result['message']), 'danger')
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -38,7 +38,7 @@ def login():
             session['user'] = result['user']
             return redirect(url_for('catalog'))
         else:
-            flash(result['message'], 'danger')
+            flash(str(result['message']), 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -153,7 +153,7 @@ def refund():
         if result['success']:
             flash('Refund requested.', 'success')
         else:
-            flash(result['message'], 'danger')
+            flash(str(result['message']), 'danger')
     refunds = get_refunds_for_user(user)
     return render_template('refunds.html', user=user, refunds=refunds)
 
@@ -166,7 +166,11 @@ def admin_orders():
     
     if request.method == 'POST':
         action = request.form.get("action")
-        order_id = int(request.form.get("order_id"))
+        order_id_value = request.form.get("order_id")
+        if order_id_value is None:
+            flash("Invalid order ID.", "danger")
+            return redirect(url_for('admin_orders'))
+        order_id = int(order_id_value)
         if action == "cancel":
             orders = load_data(os.path.join(DATA_DIR, "orders.json"))
             products = load_data(os.path.join(DATA_DIR, "products.json"))
@@ -219,7 +223,7 @@ def admin_refunds():
     refunds = load_data(os.path.join(DATA_DIR, "refunds.json"))
 
     if request.method == 'POST':
-        refund_id = int(request.form.get("refund_id"))
+        refund_id = int(request.form.get("refund_id", "0"))
         action = request.form.get("action")  # "approve" or "reject"
         for refund in refunds:
             if refund["id"] == refund_id:
@@ -246,15 +250,15 @@ def admin_dashboard():
                 pid = str(product["id"])
                 product["name"] = request.form.get(f"name_{pid}", product["name"])
                 product["description"] = request.form.get(f"description_{pid}", product["description"])
-                product["price"] = float(request.form.get(f"price_{pid}", product["price"]))
-                product["stock"] = int(request.form.get(f"stock_{pid}", product["stock"]))
+                product["price"] = float(request.form.get(f"price_{pid}") or str(product["price"]))
+                product["stock"] = int(request.form.get(f"stock_{pid}") or str(product["stock"]))
                 product["image"] = request.form.get(f"image_{pid}", product["image"])
             save_data(os.path.join(DATA_DIR, "products.json"), products)            
             flash("Products updated successfully.", "success")
             return redirect(url_for('admin_dashboard'))
 
         elif action == "delete":
-            delete_id = int(request.form.get("delete_id"))
+            delete_id = int(request.form.get("delete_id") or "0")
             products = [p for p in products if p["id"] != delete_id]
             save_data(os.path.join(DATA_DIR, "products.json"), products)            
             flash("Product deleted.", "warning")
@@ -264,11 +268,11 @@ def admin_dashboard():
             new_id = max([p["id"] for p in products], default=0) + 1
             new_product = {
                 "id": new_id,
-                "name": request.form.get("new_name"),
-                "description": request.form.get("new_description"),
-                "price": float(request.form.get("new_price")),
-                "stock": int(request.form.get("new_stock")),
-                "image": request.form.get("new_image")
+                "name": request.form.get("new_name") or "",
+                "description": request.form.get("new_description") or "",
+                "price": float(request.form.get("new_price") or "0"),
+                "stock": int(request.form.get("new_stock") or "0"),
+                "image": request.form.get("new_image") or ""
             }
             products.append(new_product)
             save_data(os.path.join(DATA_DIR, "products.json"), products)            
