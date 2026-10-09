@@ -1,3 +1,4 @@
 *.pyc
 .vercel
 .env*
+!awe_flask_app/.env.example

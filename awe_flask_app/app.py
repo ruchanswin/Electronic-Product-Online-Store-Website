@@ -1,5 +1,7 @@
-from flask import Flask, render_template, redirect, request, session, url_for, flash
+from flask import Flask, abort, render_template, redirect, request, session, url_for, flash
 import os
+from dotenv import load_dotenv
+from supabase import Client, create_client
 from utils.file_io import save_data, load_data
 from services.auth import register_user, login_user, logout_user, get_current_user
 from services.catalog import load_products
@@ -12,12 +14,26 @@ from services.invoice import generate_invoice
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(24)
+
+def get_supabase_client() -> Client:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    if not supabase_url or not supabase_key:
+        abort(503, description="Supabase is not configured. Set SUPABASE_URL and SUPABASE_KEY in awe_flask_app/.env.")
+    return create_client(supabase_url, supabase_key)
 
 @app.route('/')
 def home():
     return redirect(url_for('catalog'))
+
+@app.route('/todos')
+def todos():
+    response = get_supabase_client().table('todos').select('*').execute()
+    return render_template('todos.html', user=get_current_user(), todos=response.data)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
