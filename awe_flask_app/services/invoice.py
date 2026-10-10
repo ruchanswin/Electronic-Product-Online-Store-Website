@@ -26,7 +26,7 @@ def generate_invoice(order_id):
     # Calculate prices
     for pid, quantity in product_counts.items():
         for product in products:
-            if str(product["id"]) == str(pid):
+            if isinstance(product, dict) and str(product.get("id")) == str(pid):
                 item_total = product["price"] * quantity
                 subtotal += item_total
                 order_items.append({

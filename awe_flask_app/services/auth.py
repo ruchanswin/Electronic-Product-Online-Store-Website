@@ -42,6 +42,8 @@ def login_user(form):
         .execute()
     )
     user = response.data[0] if response.data else None
+    if not isinstance(user, dict):
+        user = None
     if user:
         stored_password = str(user.get("password") or "")
         if stored_password.startswith(("scrypt:", "pbkdf2:")):
@@ -78,6 +80,7 @@ def load_users():
     return [
         {key: value for key, value in user.items() if key != "password"}
         for user in response.data
+        if isinstance(user, dict)
     ]
 
 
@@ -92,9 +95,14 @@ def get_user_by_id(user_id):
     )
     if not response.data:
         return None
+
+    user = response.data[0]
+    if not isinstance(user, dict):
+        return None
+
     return {
         key: value
-        for key, value in response.data[0].items()
+        for key, value in user.items()
         if key != "password"
     }
 

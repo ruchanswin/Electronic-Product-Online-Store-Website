@@ -1,5 +1,6 @@
 # refund.py
 from datetime import datetime
+from typing import Any, cast
 from utils.supabase_db import get_supabase_client, next_id
 
 def request_refund(user, form):
@@ -17,7 +18,7 @@ def request_refund(user, form):
         .limit(1)
         .execute()
     )
-    order = response.data[0] if response.data else None
+    order = cast(dict[str, Any] | None, response.data[0] if response.data else None)
     if not order:
         return {"success": False, "message": "Order not found."}
     if str(order["user_id"]) != str(user["id"]):

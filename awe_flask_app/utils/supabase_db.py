@@ -1,4 +1,5 @@
 import os
+from typing import cast
 
 from dotenv import load_dotenv
 from flask import abort
@@ -21,7 +22,7 @@ def get_supabase_client() -> Client:
 
 def fetch_rows(table: str) -> list[dict]:
     response = get_supabase_client().table(table).select("*").execute()
-    return response.data
+    return cast(list[dict], response.data)
 
 
 def next_id(table: str) -> int:
@@ -33,7 +34,12 @@ def next_id(table: str) -> int:
         .limit(1)
         .execute()
     )
-    return int(response.data[0]["id"]) + 1 if response.data else 1
+    rows = cast(list[dict], response.data or [])
+    if not rows:
+        return 1
+
+    first_id = rows[0].get("id")
+    return int(first_id) + 1 if first_id is not None else 1
 
 
 def find_by_id(table: str, record_id: int | str) -> dict | None:
@@ -45,4 +51,5 @@ def find_by_id(table: str, record_id: int | str) -> dict | None:
         .limit(1)
         .execute()
     )
-    return response.data[0] if response.data else None
+    rows = cast(list[dict], response.data or [])
+    return rows[0] if rows else None

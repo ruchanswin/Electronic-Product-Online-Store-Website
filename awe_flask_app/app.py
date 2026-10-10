@@ -185,7 +185,7 @@ def admin_orders():
             if result["success"]:
                 flash(f"Order #{order_id} cancelled and stock restored.", "warning")
             else:
-                flash(result["message"], "danger")
+                flash(str(result["message"]), "danger")
         elif action == "update_status":
             new_status = request.form.get("new_status")
             message = request.form.get("status_message")
@@ -242,6 +242,8 @@ def admin_dashboard():
 
         if action == "update":
             for product in products:
+                if not isinstance(product, dict):
+                    continue
                 pid = str(product["id"])
                 values = {
                     "name": request.form.get(f"name_{pid}", product["name"]),
@@ -312,8 +314,12 @@ def view_invoice(order_id):
         return redirect(url_for('orders'))
 
     try:
-        order_user_id = int(order.get("user_id"))
-        current_user_id = int(user.get("id"))
+        order_user_id_value = order.get("user_id")
+        current_user_id_value = user.get("id")
+        if order_user_id_value is None or current_user_id_value is None:
+            raise ValueError("Missing user ID")
+        order_user_id = int(order_user_id_value)
+        current_user_id = int(current_user_id_value)
     except (TypeError, ValueError):
         flash("Invalid user ID format", "danger")
         return redirect(url_for('orders'))

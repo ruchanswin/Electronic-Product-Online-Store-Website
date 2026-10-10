@@ -1,5 +1,6 @@
 import time
 from collections import Counter
+from typing import cast
 
 from flask import session
 from postgrest.exceptions import APIError
@@ -59,12 +60,17 @@ def create_order(user):
     stock_changes = []
     for product_id, quantity in counts.items():
         product = next(
-            (item for item in products if str(item["id"]) == product_id),
+            (
+                item
+                for item in products
+                if isinstance(item, dict)
+                and str(item.get("id")) == product_id
+            ),
             None,
         )
         if product is None:
             return {"success": False, "message": f"Product ID {product_id} not found."}
-        if int(product["stock"]) < quantity:
+        if int(cast(int | float | str, product["stock"])) < quantity:
             return {
                 "success": False,
                 "message": f"'{product['name']}' has only {product['stock']} in stock.",
@@ -135,7 +141,7 @@ def get_user_orders(user):
         .eq("user_id", user["id"])
         .execute()
     )
-    return [normalize_order(order) for order in response.data]
+    return [normalize_order(cast(dict, order)) for order in response.data]
 
 
 def get_order_by_id(order_id):
@@ -198,13 +204,18 @@ def cancel_order(order_id):
     quantities = Counter(str(product_id) for product_id in order["products"])
     for product_id, quantity in quantities.items():
         product = next(
-            (item for item in products if str(item["id"]) == product_id),
+            (
+                item
+                for item in products
+                if isinstance(item, dict)
+                and str(item.get("id")) == product_id
+            ),
             None,
         )
         if product:
             response = (
                 client.table("products")
-                .update({"stock": int(product["stock"]) + quantity})
+                .update({"stock": int(cast(int | float | str, product["stock"])) + quantity})
                 .eq("id", product["id"])
                 .select("id")
                 .execute()
