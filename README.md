@@ -1,6 +1,6 @@
 # AWE Electronics Online Store
 
-A simple yet functional online electronics store built with Python Flask, using JSON files for data storage. It supports customers and administrators with features like browsing, cart management, order tracking, refunds, and basic analytics.
+A simple yet functional online electronics store built with Python Flask and Supabase. It supports customers and administrators with features like browsing, cart management, order tracking, refunds, and basic analytics.
 
 ## Features
 Customers:
@@ -19,7 +19,7 @@ Admins:
 Technologies Used
 - Python 3
 - Flask (web framework)
-- JSON (for storing data)
+- Supabase (for storing products, users, orders, and refunds)
 - HTML + Jinja templates (for UI)
 - Modular file structure with models/ and services/
 
@@ -30,14 +30,18 @@ Technologies Used
    pip install -r requirements.txt
    ```
 
-2. Create `awe_flask_app/.env` from `awe_flask_app/.env.example` and set `SUPABASE_URL` and `SUPABASE_KEY` to your Supabase project values. The `.env` file is ignored by Git.
+2. Create `awe_flask_app/.env` and set `SUPABASE_URL` and `SUPABASE_KEY` to your Supabase project values. Keep the `.env` file out of Git.
 
 3. Run the app from the `awe_flask_app` directory:
    ```
    python app.py
    ```
 
-Open `http://127.0.0.1:5001` for the store or `http://127.0.0.1:5001/todos` to view rows from the Supabase `todos` table.
+Open `http://127.0.0.1:5001` for the store.
+
+The app reads and writes the `products`, `users`, `orders`, and `refunds` tables in Supabase. The uploaded `orders` table stores products and delivery updates in numbered columns (for example, `products/0` and `delivery_updates/0/status`); the app maps these columns to the order structure used by the store. With the current table shape, an order can contain up to three product entries and up to three delivery updates.
+
+The app uses its Supabase key for server-side database requests. Supabase Row Level Security (RLS) and table permissions still apply; configure policies appropriate for this Flask app before enabling database writes. Do not add broad anonymous access policies for the `users` table.
 
 ## Deploying to Vercel
 
@@ -45,53 +49,11 @@ The repository root contains `index.py`, which exposes the Flask app in `awe_fla
 
 In Vercel, add `FLASK_SECRET_KEY`, `SUPABASE_URL`, and `SUPABASE_KEY` under **Project Settings → Environment Variables** for the environments you deploy (Production and Preview as needed). Use a long, random value for `FLASK_SECRET_KEY`; never commit deployment secrets or rely on `.env` files being uploaded.
 
-**Important:** The store currently saves users, orders, refunds, and products in JSON files. Vercel Functions do not provide persistent writable local storage, so changes to those files will not reliably persist across requests or deployments. Use a persistent database (for example, Supabase) for store data before using registration, order, refund, or admin write features in production. The Todos page already reads from Supabase.
+**Important:** Store data is persisted in Supabase. In Vercel, configure `SUPABASE_URL` and `SUPABASE_KEY` as environment variables and verify your Supabase RLS policies permit the intended operations without exposing user data.
 
-## Project Structure
-```
-A3_Final_Version/
-├── data/
-│   ├── users.json
-│   ├── products.json
-│   ├── orders.json
-│   └── refunds.json
-├── models/
-│   ├── user.py
-│   ├── product.py
-│   ├── order.py
-│   └── refund.py
-├── services/
-|   |── __init_.py
-│   ├── auth.py
-│   ├── cart.py
-│   ├── catalog.py
-│   ├── invoice.py
-│   ├── order.py
-│   └── refund.py
-|   └── statistics.py
-├── static/
-│   └── style.css
-├── templates/
-│   └── admin_dashboard.html
-│   └── admin_orders.html
-│   └── admin_refunds.html
-│   └── admin_statistics.html
-│   └── cart.html
-│   └── catalog.html
-│   └── checkout.html
-│   └── invoice.html
-│   └── layout.html
-│   └── login.html
-│   └── orders.html
-│   └── refunds.html
-│   └── register.html
-│   └── reset_password.html
-├── utils/
-|   |── __init_.py
-│   └── file.io.py
-|── app.py
-``` 
+## Database integration
 
+The Flask app reads and writes the `products`, `users`, `orders`, and `refunds` tables in Supabase through the service layer and shared database helpers in `awe_flask_app/utils/`. The app maps the uploaded `orders` table's numbered product and delivery-update columns to the order structure used by the store. With the current table shape, an order supports up to three product entries and three delivery updates.
 
-
+Supabase Row Level Security (RLS) and table permissions apply to all requests. Configure policies for the server-side Flask app before enabling database writes; do not add broad anonymous access policies for the `users` table.
 

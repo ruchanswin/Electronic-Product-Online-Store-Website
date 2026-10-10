@@ -1,0 +1,48 @@
+import os
+
+from dotenv import load_dotenv
+from flask import abort
+from supabase import Client, create_client
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+
+
+def get_supabase_client() -> Client:
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_KEY")
+    if not supabase_url or not supabase_key:
+        abort(
+            503,
+            description="Supabase is not configured. Set SUPABASE_URL and SUPABASE_KEY.",
+        )
+    return create_client(supabase_url, supabase_key)
+
+
+def fetch_rows(table: str) -> list[dict]:
+    response = get_supabase_client().table(table).select("*").execute()
+    return response.data
+
+
+def next_id(table: str) -> int:
+    response = (
+        get_supabase_client()
+        .table(table)
+        .select("id")
+        .order("id", desc=True)
+        .limit(1)
+        .execute()
+    )
+    return int(response.data[0]["id"]) + 1 if response.data else 1
+
+
+def find_by_id(table: str, record_id: int | str) -> dict | None:
+    response = (
+        get_supabase_client()
+        .table(table)
+        .select("*")
+        .eq("id", record_id)
+        .limit(1)
+        .execute()
+    )
+    return response.data[0] if response.data else None

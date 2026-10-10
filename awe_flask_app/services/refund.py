@@ -1,37 +1,45 @@
 # refund.py
-from utils.file_io import load_data, save_data
 from datetime import datetime
-import os
-
-REFUND_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "refunds.json")
-ORDERS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "orders.json")
+from utils.supabase_db import get_supabase_client, next_id
 
 def request_refund(user, form):
-    refunds = load_data(REFUND_FILE)
-    orders = load_data(ORDERS_FILE)
-    
-    # Validate order exists
     order_id = form.get("order_id")
-    order = next((o for o in orders if o["id"] == int(order_id)), None)
+    try:
+        order_id = int(order_id)
+    except (TypeError, ValueError):
+        return {"success": False, "message": "Invalid order ID."}
+
+    client = get_supabase_client()
+    response = (
+        client.table("orders")
+        .select("id,user_id")
+        .eq("id", order_id)
+        .limit(1)
+        .execute()
+    )
+    order = response.data[0] if response.data else None
     if not order:
         return {"success": False, "message": "Order not found."}
-    
-    # Validate order belongs to user
-    if order["user_id"] != user["id"]:
+    if str(order["user_id"]) != str(user["id"]):
         return {"success": False, "message": "This order does not belong to you."}
 
     new_refund = {
-        "id": len(refunds) + 1,
+        "id": next_id("refunds"),
         "user_id": user["id"],
         "order_id": order_id,
         "reason": form.get("reason"),
         "timestamp": str(datetime.now()),
         "status": "Pending"
     }
-    refunds.append(new_refund)
-    save_data(REFUND_FILE, refunds)
+    client.table("refunds").insert(new_refund).execute()
     return {"success": True}
 
 def get_refunds_for_user(user):
-    refunds = load_data(REFUND_FILE)
-    return [r for r in refunds if r["user_id"] == user["id"]]
+    response = (
+        get_supabase_client()
+        .table("refunds")
+        .select("*")
+        .eq("user_id", user["id"])
+        .execute()
+    )
+    return response.data

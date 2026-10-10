@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta
-from utils.file_io import load_data
-import os
+from utils.supabase_db import fetch_rows
 
 def get_sales_statistics(period='day'):
-    orders = load_data(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "orders.json"))
-    products = load_data(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "products.json"))
+    from utils.supabase_store import normalize_order
+
+    orders = [normalize_order(order) for order in fetch_rows("orders")]
+    products = fetch_rows("products")
     
     # Create a product lookup dictionary for faster access
     product_lookup = {str(p['id']): p for p in products}
@@ -28,7 +29,7 @@ def get_sales_statistics(period='day'):
     # Filter orders within the period
     period_orders = [
         order for order in orders 
-        if datetime.strptime(order['timestamp'], "%Y-%m-%d %H:%M:%S") >= start_date
+        if datetime.fromisoformat(order['timestamp']) >= start_date
     ]
 
     # Calculate statistics

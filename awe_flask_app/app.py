@@ -1,39 +1,39 @@
-from flask import Flask, abort, render_template, redirect, request, session, url_for, flash
+from flask import Flask, render_template, redirect, request, session, url_for, flash
 import os
-from dotenv import load_dotenv
-from supabase import Client, create_client
-from utils.file_io import save_data, load_data
-from services.auth import register_user, login_user, logout_user, get_current_user
-from services.catalog import load_products
+from services.auth import (
+    get_current_user,
+    load_users,
+    login_user,
+    logout_user,
+    register_user,
+    reset_user_password,
+)
+from services.catalog import (
+    create_product,
+    delete_product,
+    load_products,
+    update_product,
+)
 from services.cart import get_cart, add_to_cart, remove_from_cart, update_cart_quantity 
-from services.order import create_order, get_user_orders, update_delivery_status
+from services.order import (
+    cancel_order,
+    create_order,
+    get_order_by_id,
+    get_user_orders,
+    update_delivery_status,
+)
 from services.refund import request_refund, get_refunds_for_user
 from services.statistics import get_sales_statistics
 from services.invoice import generate_invoice
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+from utils.supabase_db import fetch_rows, get_supabase_client
+from utils.supabase_store import normalize_order
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or os.urandom(24)
 
-def get_supabase_client() -> Client:
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
-        abort(503, description="Supabase is not configured. Set SUPABASE_URL and SUPABASE_KEY in awe_flask_app/.env.")
-    return create_client(supabase_url, supabase_key)
-
 @app.route('/')
 def home():
     return redirect(url_for('catalog'))
-
-@app.route('/todos')
-def todos():
-    response = get_supabase_client().table('todos').select('*').execute()
-    return render_template('todos.html', user=get_current_user(), todos=response.data)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -69,14 +69,7 @@ def reset_password():
     if request.method == 'POST':
         email = request.form.get("email")
         new_pass = request.form.get("new_password")
-        users = load_data(os.path.join(DATA_DIR, "users.json"))
-        found = False
-        for u in users:
-            if u["email"] == email:
-                u["password"] = new_pass
-                found = True
-        if found:
-            save_data(os.path.join(DATA_DIR, "users.json"), users)
+        if reset_user_password(email, new_pass or ""):
             flash("Password reset successful.", "success")
             return redirect(url_for('login'))
         else:
@@ -188,32 +181,11 @@ def admin_orders():
             return redirect(url_for('admin_orders'))
         order_id = int(order_id_value)
         if action == "cancel":
-            orders = load_data(os.path.join(DATA_DIR, "orders.json"))
-            products = load_data(os.path.join(DATA_DIR, "products.json"))
-            
-            # Find the order to be cancelled
-            order_to_cancel = next((o for o in orders if o["id"] == order_id), None)
-            if order_to_cancel:
-                # Count products in the cancelled order
-                product_counts = {}
-                for pid in order_to_cancel["products"]:
-                    product_counts[pid] = product_counts.get(pid, 0) + 1
-                
-                # Restore stock for each product
-                for pid, qty in product_counts.items():
-                    for product in products:
-                        if str(product["id"]) == str(pid):
-                            product["stock"] += qty
-                
-                # Remove the cancelled order
-                orders = [o for o in orders if o["id"] != order_id]
-                
-                # Save updated data
-                save_data(os.path.join(DATA_DIR, "products.json"), products)
-                save_data(os.path.join(DATA_DIR, "orders.json"), orders)
+            result = cancel_order(order_id)
+            if result["success"]:
                 flash(f"Order #{order_id} cancelled and stock restored.", "warning")
             else:
-                flash(f"Order #{order_id} not found.", "danger")
+                flash(result["message"], "danger")
         elif action == "update_status":
             new_status = request.form.get("new_status")
             message = request.form.get("status_message")
@@ -223,10 +195,9 @@ def admin_orders():
             else:
                 flash(result["message"], "danger")
     
-    # Always load fresh data after any POST operation
-    orders = load_data(os.path.join(DATA_DIR, "orders.json"))
-    users = load_data(os.path.join(DATA_DIR, "users.json"))
-    products = load_data(os.path.join(DATA_DIR, "products.json"))
+    orders = [normalize_order(order) for order in fetch_rows("orders")]
+    users = load_users()
+    products = load_products()
     return render_template("admin_orders.html", user=user, orders=orders, users=users, products=products)
 
 @app.route('/admin/refunds', methods=['GET', 'POST'])
@@ -236,16 +207,24 @@ def admin_refunds():
         flash("Access denied", "danger")
         return redirect(url_for('catalog'))
 
-    refunds = load_data(os.path.join(DATA_DIR, "refunds.json"))
+    refunds = fetch_rows("refunds")
 
     if request.method == 'POST':
         refund_id = int(request.form.get("refund_id", "0"))
         action = request.form.get("action")  # "approve" or "reject"
-        for refund in refunds:
-            if refund["id"] == refund_id:
-                refund["status"] = "approved" if action == "approve" else "rejected"
-        save_data(os.path.join(DATA_DIR, "refunds.json"), refunds)
-        flash(f"Refund #{refund_id} {action}d.", "success")
+        response = (
+            get_supabase_client()
+            .table("refunds")
+            .update({"status": "approved" if action == "approve" else "rejected"})
+            .eq("id", refund_id)
+            .select("id")
+            .execute()
+        )
+        if response.data:
+            flash(f"Refund #{refund_id} {action}d.", "success")
+        else:
+            flash(f"Refund #{refund_id} was not found or could not be updated.", "danger")
+        refunds = fetch_rows("refunds")
 
     return render_template("admin_refunds.html", user=user, refunds=refunds)
 
@@ -256,7 +235,7 @@ def admin_dashboard():
         flash("Access denied", "danger")
         return redirect(url_for("catalog"))
 
-    products = load_data(os.path.join(DATA_DIR, "products.json"))
+    products = load_products()
     
     if request.method == 'POST':
         action = request.form.get("action")
@@ -264,35 +243,45 @@ def admin_dashboard():
         if action == "update":
             for product in products:
                 pid = str(product["id"])
-                product["name"] = request.form.get(f"name_{pid}", product["name"])
-                product["description"] = request.form.get(f"description_{pid}", product["description"])
-                product["price"] = float(request.form.get(f"price_{pid}") or str(product["price"]))
-                product["stock"] = int(request.form.get(f"stock_{pid}") or str(product["stock"]))
-                product["image"] = request.form.get(f"image_{pid}", product["image"])
-            save_data(os.path.join(DATA_DIR, "products.json"), products)            
+                values = {
+                    "name": request.form.get(f"name_{pid}", product["name"]),
+                    "description": request.form.get(
+                        f"description_{pid}", product["description"]
+                    ),
+                    "price": float(
+                        request.form.get(f"price_{pid}") or str(product["price"])
+                    ),
+                    "stock": int(
+                        request.form.get(f"stock_{pid}") or str(product["stock"])
+                    ),
+                    "image": request.form.get(f"image_{pid}", product["image"]),
+                }
+                if not update_product(product["id"], values):
+                    flash(f"Product #{pid} was not found or could not be updated.", "danger")
+                    return redirect(url_for("admin_dashboard"))
             flash("Products updated successfully.", "success")
             return redirect(url_for('admin_dashboard'))
 
         elif action == "delete":
             delete_id = int(request.form.get("delete_id") or "0")
-            products = [p for p in products if p["id"] != delete_id]
-            save_data(os.path.join(DATA_DIR, "products.json"), products)            
-            flash("Product deleted.", "warning")
+            if delete_product(delete_id):
+                flash("Product deleted.", "warning")
+            else:
+                flash(f"Product #{delete_id} was not found or could not be deleted.", "danger")
             return redirect(url_for("admin_dashboard"))
 
         elif action == "add":
-            new_id = max([p["id"] for p in products], default=0) + 1
             new_product = {
-                "id": new_id,
                 "name": request.form.get("new_name") or "",
                 "description": request.form.get("new_description") or "",
                 "price": float(request.form.get("new_price") or "0"),
                 "stock": int(request.form.get("new_stock") or "0"),
                 "image": request.form.get("new_image") or ""
             }
-            products.append(new_product)
-            save_data(os.path.join(DATA_DIR, "products.json"), products)            
-            flash("New product added.", "success")
+            if create_product(new_product):
+                flash("New product added.", "success")
+            else:
+                flash("Supabase did not save the new product.", "danger")
             return redirect(url_for("admin_dashboard"))
 
     return render_template("admin_dashboard.html", user=user, products=products)
@@ -316,8 +305,7 @@ def view_invoice(order_id):
         return redirect(url_for('login'))
     
     # Load orders
-    orders = load_data(os.path.join(DATA_DIR, "orders.json"))
-    order = next((o for o in orders if o["id"] == order_id), None)
+    order = get_order_by_id(order_id)
 
     if not order:
         flash("Order not found", "danger")

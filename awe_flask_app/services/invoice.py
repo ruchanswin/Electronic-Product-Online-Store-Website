@@ -1,41 +1,27 @@
 import time
-import os
-from utils.file_io import load_data
-from services.order import get_delivery_status
+
+from services.catalog import load_products
+from services.order import get_delivery_status, get_order_by_id
+from services.auth import get_user_by_id
 
 def generate_invoice(order_id):
-    orders = load_data(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "orders.json"))
-    products = load_data(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "products.json"))
-    users = load_data(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "users.json"))
-    
-    # Find the order
-    order = None
-    for o in orders:
-        if o["id"] == order_id:
-            order = o
-            break
-    
+    order = get_order_by_id(order_id)
     if not order:
         return {"success": False, "message": "Order not found"}
     
-    # Find the customer
-    customer = None
-    for u in users:
-        if u["id"] == order["user_id"]:
-            customer = u
-            break
-    
+    customer = get_user_by_id(order["user_id"])
     if not customer:
         return {"success": False, "message": "Customer not found"}
     
     # Calculate order details
     order_items = []
     subtotal = 0
+    products = load_products()
     
     # Count product quantities
     product_counts = {}
     for pid in order["products"]:
-        product_counts[pid] = product_counts.get(pid, 0) + 1
+        product_counts[str(pid)] = product_counts.get(str(pid), 0) + 1
     
     # Calculate prices
     for pid, quantity in product_counts.items():

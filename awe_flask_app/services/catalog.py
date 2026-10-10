@@ -1,8 +1,49 @@
 # catalog.py
-from utils.file_io import load_data
-import os
+from utils.supabase_db import get_supabase_client, next_id
 
-PRODUCTS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "products.json")
 
 def load_products():
-    return load_data(PRODUCTS_FILE)
+    response = (
+        get_supabase_client()
+        .table("products")
+        .select("*")
+        .order("id")
+        .execute()
+    )
+    return response.data
+
+
+def create_product(product):
+    product["id"] = next_id("products")
+    response = (
+        get_supabase_client()
+        .table("products")
+        .insert(product)
+        .select("id")
+        .execute()
+    )
+    return bool(response.data)
+
+
+def update_product(product_id, values):
+    response = (
+        get_supabase_client()
+        .table("products")
+        .update(values)
+        .eq("id", product_id)
+        .select("id")
+        .execute()
+    )
+    return bool(response.data)
+
+
+def delete_product(product_id):
+    response = (
+        get_supabase_client()
+        .table("products")
+        .delete()
+        .eq("id", product_id)
+        .select("id")
+        .execute()
+    )
+    return bool(response.data)
